@@ -1,5 +1,26 @@
 # Фаза D — Multi-GNN адаптации + ablation (ядро Этапа 2, RQ2)
 
+> ## ⟳ РЕПОЗИТОРИЙ СМЕНИЛСЯ: актуальный — `github.com/Ezzenin/gnn-aml-graphs-kr`
+> На ПК переключиться на новый репо (re-clone или `git remote set-url origin
+> https://github.com/Ezzenin/gnn-aml-graphs-kr.git`). Коммиты — без трейлеров
+> Co-Authored-By. Данные/чекпоинты не коммитятся.
+>
+> ### ⟳ ПРИОРИТЕТ: ПОЛНЫЙ full-data ablation (решает судьбу RQ2)
+> Сейчас в репо есть только base + full на full-data; промежуточных rev/port/ego
+> НЕТ. Догнать сетку на ПК (CUDA), чтобы ablation был полным:
+> ```bash
+> git pull
+> python -m src.train_edge --config configs/ibm_gine_rev_fulldata.yaml
+> python -m src.train_edge --config configs/ibm_gine_port_fulldata.yaml
+> python -m src.train_edge --config configs/ibm_gine_ego_fulldata.yaml
+> git add results/ibm_gine_rev_fulldata_metrics.json results/ibm_gine_port_fulldata_metrics.json \
+>         results/ibm_gine_ego_fulldata_metrics.json results/ibm_*_fulldata_pr_curve.png
+> git commit -m "feat: полный full-data ablation (rev/port/ego)" && git push
+> ```
+> Если loss взрывается (pos_weight) — понизить `train.pos_weight` в конфиге (50–100,
+> уже стоит 100 в base/full). Сводку `ibm_comparison_fulldata.md` / `ablation_fulldata.png`
+> (станет полным ablation, не «base vs full») собираю на Mac (`python -m src.compare --ibm`).
+
 > ## СТАТУС: код готов (написан и проверен на Mac). ПК запускает ТОЛЬКО обучение.
 >
 > Гибрид-тактика: весь код Фазы D реализован и smoke-проверен на Mac (CPU).
