@@ -92,9 +92,18 @@ def test_edge_gnn_uses_target_edge_features():
     assert not torch.allclose(out1, out2), "голова игнорирует признаки целевого ребра"
 
 
+def test_edge_gnn_edge_updates_forward_shape():
+    # GIN+EU: на каждом слое обновляется эмбеддинг ребра. Форма выхода не меняется.
+    x, ei, ea, eli, ela = _toy_batch()
+    model = build_edge_model("gine", in_node=5, in_edge=6, hidden=16, edge_updates=True)
+    assert model.edge_mlps is not None and len(model.edge_mlps) == 2
+    out = model(x, ei, ea, eli, ela)
+    assert out.shape == (4, 2)
+
+
 def test_edge_gnn_each_adaptation_independently():
     x, ei, ea, eli, ela = _toy_batch()
-    for flags in [dict(ports=True), dict(ego_ids=True)]:
+    for flags in [dict(ports=True), dict(ego_ids=True), dict(edge_updates=True)]:
         model = EdgeGNN(in_node=5, in_edge=6, hidden=16, **flags)
         out = model(x, ei, ea, eli, ela)
         assert out.shape == (4, 2), f"сломалось на {flags}"

@@ -65,6 +65,15 @@ IBM_VARIANTS_FULLDATA = [
     ("ibm_gine_ego_fulldata", "+ego"),
     ("ibm_multignn_fulldata", "Multi-GNN (full)"),
 ]
+# GIN+EU (edge updates) поверх full-data/no-time — самый дешёвый буст по Egressy
+# (+19пп). Показывает вклад edge-updates на base и на полном Multi-GNN.
+IBM_VARIANTS_EU = [
+    ("ibm_xgboost_notime", "XGBoost"),
+    ("ibm_gine_fulldata", "GINe (base)"),
+    ("ibm_gine_eu_fulldata", "GINe+EU"),
+    ("ibm_multignn_fulldata", "Multi-GNN"),
+    ("ibm_multignn_eu_fulldata", "Multi-GNN+EU"),
+]
 IBM_METRIC_KEYS = ["auc_pr", "f1", "recall_at_precision_90", "recall"]
 # Опубликованные F1-minority (%) на AML Small HI — для справки, НЕ сравнивать в одну
 # колонку с нашими (другой сплит 60/20/20, обучение на всех рёбрах). См. docs/lit_benchmarks.md.
@@ -474,6 +483,13 @@ def summarize_ibm(results_dir: str = "results") -> None:
         print(f"\n=== режим full-data (no-time + все train-рёбра){' — base vs full' if partial else ''} ===")
         write_ibm_table(rows_fd, results_dir, name="ibm_comparison_fulldata", regime=tag)
         plot_ablation(rows_fd, results_dir, out_name="ablation_fulldata", regime=tag)
+
+    # Режим GIN+EU (edge updates поверх full-data) — если перепрогнан.
+    rows_eu = collect_ibm(results_dir, IBM_VARIANTS_EU)
+    if any(r["variant"].endswith("+EU") for r in rows_eu):
+        print("\n=== режим full-data + edge-updates (GIN+EU) ===")
+        write_ibm_table(rows_eu, results_dir, name="ibm_comparison_eu",
+                        regime=" (full-data + edge-updates)")
 
     summarize_per_pattern(results_dir)
 

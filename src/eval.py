@@ -34,6 +34,7 @@ def load_edge_model(checkpoint_path: str, device=None):
         reverse_mp=bool(mp.get("reverse_mp", False)),
         ports=bool(mp.get("ports", False)),
         ego_ids=bool(mp.get("ego_ids", False)),
+        edge_updates=bool(mp.get("edge_updates", False)),
     )
     model.load_state_dict(ckpt["state_dict"])
     model.to(device).eval()

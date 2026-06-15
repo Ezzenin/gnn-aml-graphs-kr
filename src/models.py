@@ -134,11 +134,13 @@ class EdgeGNN(torch.nn.Module):
     """
 
     def __init__(self, in_node, in_edge, hidden=64, num_layers=2, dropout=0.5,
-                 reverse_mp=False, ports=False, ego_ids=False, in_edge_label=None):
+                 reverse_mp=False, ports=False, ego_ids=False, in_edge_label=None,
+                 edge_updates=False):
         super().__init__()
         self.reverse_mp = reverse_mp  # обрабатывается на уровне данных (train_edge)
         self.ports = ports
         self.ego_ids = ego_ids
+        self.edge_updates = edge_updates
         self.dropout = dropout
 
         node_in = in_node + (1 if ego_ids else 0)
@@ -151,9 +153,15 @@ class EdgeGNN(torch.nn.Module):
 
         self.convs = torch.nn.ModuleList()
         self.bns = torch.nn.ModuleList()
+        # GIN+EU (Egressy 2024): на каждом слое обновляем и эмбеддинг ребра из
+        # [e, h_src, h_dst] — самый дешёвый сильный буст (+19пп в статье), не
+        # мультиграфовая адаптация. Резидуально, отдельный MLP на слой.
+        self.edge_mlps = torch.nn.ModuleList() if edge_updates else None
         for _ in range(num_layers):
             self.convs.append(GINEConv(_mlp(hidden, hidden), edge_dim=hidden, train_eps=True))
             self.bns.append(BatchNorm1d(hidden))
+            if edge_updates:
+                self.edge_mlps.append(_mlp(3 * hidden, hidden))
 
         self.head = Sequential(
             Linear(3 * hidden, hidden), ReLU(),
@@ -177,7 +185,11 @@ class EdgeGNN(torch.nn.Module):
 
         h = self.node_enc(x)
         e = self.edge_enc(edge_attr)
-        for conv, bn in zip(self.convs, self.bns):
+        src, dst = edge_index[0], edge_index[1]
+        for i, (conv, bn) in enumerate(zip(self.convs, self.bns)):
+            if self.edge_updates:
+                # Обновление ребра из текущих состояний концов (резидуально).
+                e = e + self.edge_mlps[i](torch.cat([e, h[src], h[dst]], dim=-1))
             h = F.relu(bn(conv(h, edge_index, e)))
             h = F.dropout(h, p=self.dropout, training=self.training)
         h_u = h[edge_label_index[0]]
@@ -189,13 +201,14 @@ class EdgeGNN(torch.nn.Module):
 def build_edge_model(name: str, in_node: int, in_edge: int, hidden: int = 64,
                      num_layers: int = 2, dropout: float = 0.5,
                      reverse_mp: bool = False, ports: bool = False,
-                     ego_ids: bool = False, in_edge_label: Optional[int] = None) -> torch.nn.Module:
+                     ego_ids: bool = False, in_edge_label: Optional[int] = None,
+                     edge_updates: bool = False) -> torch.nn.Module:
     """Фабрика edge-моделей. name='gine' (C2); адаптации — флагами (Фаза D)."""
     name = name.lower()
     if name in ("gine", "gin", "edgegnn"):
         return EdgeGNN(in_node, in_edge, hidden, num_layers, dropout,
                        reverse_mp=reverse_mp, ports=ports, ego_ids=ego_ids,
-                       in_edge_label=in_edge_label)
+                       in_edge_label=in_edge_label, edge_updates=edge_updates)
     raise ValueError(f"Неизвестная edge-архитектура: {name!r} (gine)")
 
 

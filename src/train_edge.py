@@ -161,6 +161,7 @@ def run(config: dict) -> dict:
         reverse_mp=reverse_mp,
         ports=bool(m_params.get("ports", False)),
         ego_ids=bool(m_params.get("ego_ids", False)),
+        edge_updates=bool(m_params.get("edge_updates", False)),
     ).to(device)
     print(f"[model] {model_cfg.get('type','gine')} | params={sum(p.numel() for p in model.parameters()):,}")
 
