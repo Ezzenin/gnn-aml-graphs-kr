@@ -20,6 +20,20 @@
 > Если loss взрывается (pos_weight) — понизить `train.pos_weight` в конфиге (50–100,
 > уже стоит 100 в base/full). Сводку `ibm_comparison_fulldata.md` / `ablation_fulldata.png`
 > (станет полным ablation, не «base vs full») собираю на Mac (`python -m src.compare --ibm`).
+>
+> ### ⟳ GIN+EU (edge updates) — лучший честный шанс для графов (литература +19пп)
+> Egressy: GIN+EU = 28.7→47.7 (без мультиграфовых адаптаций), Multi-GIN+EU ≈ 64.8
+> (обходит бустинг). Прогнать на ПК (CUDA), full-data/no-time:
+> ```bash
+> python -m src.train_edge --config configs/ibm_gine_eu_fulldata.yaml      # изолирует вклад EU
+> python -m src.train_edge --config configs/ibm_multignn_eu_fulldata.yaml  # полный Multi-GNN+EU
+> git add results/ibm_gine_eu_fulldata_metrics.json results/ibm_multignn_eu_fulldata_metrics.json \
+>         results/ibm_*_eu_fulldata_pr_curve.png
+> git commit -m "feat: GIN+EU full-data результаты" && git push
+> ```
+> Сводка `ibm_comparison_eu.md` собирается на Mac. Это решающий эксперимент для
+> «применимости графов»: если EU даёт заметный прирост — прямое подтверждение
+> литературы; если нет — граница применимости в нашем режиме (тоже защитопригодно).
 
 > ## СТАТУС: код готов (написан и проверен на Mac). ПК запускает ТОЛЬКО обучение.
 >
