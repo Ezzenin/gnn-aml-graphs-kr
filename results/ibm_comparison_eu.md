@@ -1,4 +1,4 @@
-# IBM AML HI-Small (test): бейзлайн + ablation Multi-GNN (full-data/no-time)
+# IBM AML HI-Small (test): бейзлайн + ablation Multi-GNN (full-data + edge-updates)
 
 Главные метрики: AUC-PR и F1 (позитив = laundering). Ablation: вклад
 адаптаций reverse / port / ego поверх базовой GINe (RQ2).
@@ -7,10 +7,9 @@
 |---|---|---|---|---|
 | XGBoost | 0.2398 | 0.2976 | 0.0217 | 0.3103 |
 | GINe (base) | 0.0537 | 0.1160 | 0.0000 | 0.1446 |
-| +reverse | 0.0401 | 0.0831 | 0.0000 | 0.1007 |
-| +port | 0.0542 | 0.1114 | 0.0000 | 0.1279 |
-| +ego | 0.0327 | 0.0810 | 0.0000 | 0.2653 |
-| Multi-GNN (full) | 0.0412 | 0.1133 | 0.0000 | 0.3254 |
+| GINe+EU | 0.0260 | 0.0587 | 0.0000 | 0.4288 |
+| Multi-GNN | 0.0412 | 0.1133 | 0.0000 | 0.3254 |
+| Multi-GNN+EU | 0.0346 | 0.1153 | 0.0000 | 0.1858 |
 
 ## Reference results (literature) — F1-minority, %
 
