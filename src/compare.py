@@ -59,6 +59,7 @@ IBM_VARIANTS_NOTIME = [
 ]
 IBM_VARIANTS_FULLDATA = [
     ("ibm_xgboost_notime", "XGBoost"),
+    ("ibm_xgboost_fan", "XGBoost+fan"),
     ("ibm_gine_fulldata", "GINe (base)"),
     ("ibm_gine_rev_fulldata", "+reverse"),
     ("ibm_gine_port_fulldata", "+port"),
@@ -100,6 +101,7 @@ CANONICAL_PATTERNS = [
 # выбранный baseline). Режим явно указан в заголовке таблицы.
 PER_PATTERN_FAMILIES = [
     ("ibm_xgboost_notime", "XGBoost"),
+    ("ibm_xgboost_fan", "XGBoost+fan"),
     ("ibm_gine_fulldata", "GINe (base)"),
     ("ibm_multignn_fulldata", "Multi-GNN"),
     ("ibm_heuristics", "Эвристики"),
@@ -281,9 +283,12 @@ def _literature_block() -> str:
     for name, f1, note in LITERATURE_F1_HI:
         lines.append(f"| {name} | {f1:.1f} | {note} |")
     lines += ["",
-              "Наш режим ослаблен (сабсэмпл негативов, окрестности [10,10], без edge-",
-              "updates, XGBoost без подграфовых GF-фич), поэтому абсолютные числа ниже;",
-              "воспроизводим направление эффекта, см. docs/lit_review.md.", ""]
+              "Наш режим ослаблен (сабсэмпл негативов, окрестности [10,10], XGBoost без",
+              "подграфовых GF-фич), поэтому абсолютные числа ниже. Устойчивого переноса",
+              "эффекта адаптаций (reverse/port/ego) не наблюдается ни в одном из трёх",
+              "режимов (с временем / без времени / full-data): знак и порядок дельт к base",
+              "меняются между режимами, full-data не воспроизводит направление Egressy.",
+              "См. docs/lit_benchmarks.md §1.2.", ""]
     return "\n".join(lines)
 
 
