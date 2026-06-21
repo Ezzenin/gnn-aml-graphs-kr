@@ -135,12 +135,13 @@ class EdgeGNN(torch.nn.Module):
 
     def __init__(self, in_node, in_edge, hidden=64, num_layers=2, dropout=0.5,
                  reverse_mp=False, ports=False, ego_ids=False, in_edge_label=None,
-                 edge_updates=False):
+                 edge_updates=False, conv_type="gine", deg=None):
         super().__init__()
         self.reverse_mp = reverse_mp  # обрабатывается на уровне данных (train_edge)
         self.ports = ports
         self.ego_ids = ego_ids
         self.edge_updates = edge_updates
+        self.conv_type = conv_type
         self.dropout = dropout
 
         node_in = in_node + (1 if ego_ids else 0)
@@ -158,7 +159,7 @@ class EdgeGNN(torch.nn.Module):
         # мультиграфовая адаптация. Резидуально, отдельный MLP на слой.
         self.edge_mlps = torch.nn.ModuleList() if edge_updates else None
         for _ in range(num_layers):
-            self.convs.append(GINEConv(_mlp(hidden, hidden), edge_dim=hidden, train_eps=True))
+            self.convs.append(self._build_conv(conv_type, hidden, deg))
             self.bns.append(BatchNorm1d(hidden))
             if edge_updates:
                 self.edge_mlps.append(_mlp(3 * hidden, hidden))
@@ -167,6 +168,26 @@ class EdgeGNN(torch.nn.Module):
             Linear(3 * hidden, hidden), ReLU(),
             torch.nn.Dropout(dropout), Linear(hidden, 2),
         )
+
+    @staticmethod
+    def _build_conv(conv_type, hidden, deg):
+        """Один edge-aware слой свёртки: GINEConv (база) или PNAConv (сильный режим).
+
+        Обе свёртки имеют одинаковый интерфейс forward(h, edge_index, e), где e —
+        эмбеддинг ребра в размерности hidden (edge_dim=hidden), поэтому остальной
+        стек EdgeGNN (адаптации, edge-updates, голова) от conv_type не зависит.
+        PNA — главный архитектурный рычаг «сильного режима» (Egressy 2024):
+        несколько агрегаторов (mean/min/max/std) + степенные скейлеры; требует
+        deg-гистограмму обучающего графа.
+        """
+        if conv_type == "pna":
+            if deg is None:
+                raise ValueError("conv_type='pna' требует deg-гистограмму train-графа")
+            return PNAConv(hidden, hidden, aggregators=PNA.AGGREGATORS,
+                           scalers=PNA.SCALERS, deg=deg, edge_dim=hidden, towers=1)
+        if conv_type == "gine":
+            return GINEConv(_mlp(hidden, hidden), edge_dim=hidden, train_eps=True)
+        raise ValueError(f"Неизвестный conv_type: {conv_type!r} (gine|pna)")
 
     def forward(self, x, edge_index, edge_attr, edge_label_index, edge_label_attr):
         # ── Батч-уровневые адаптации (Фаза D): ego → port ──
@@ -202,14 +223,18 @@ def build_edge_model(name: str, in_node: int, in_edge: int, hidden: int = 64,
                      num_layers: int = 2, dropout: float = 0.5,
                      reverse_mp: bool = False, ports: bool = False,
                      ego_ids: bool = False, in_edge_label: Optional[int] = None,
-                     edge_updates: bool = False) -> torch.nn.Module:
-    """Фабрика edge-моделей. name='gine' (C2); адаптации — флагами (Фаза D)."""
+                     edge_updates: bool = False, deg: Optional["torch.Tensor"] = None
+                     ) -> torch.nn.Module:
+    """Фабрика edge-моделей. name='gine' (C2, база) | 'pna' (сильный режим, Egressy);
+    мультиграфовые адаптации и edge-updates — флагами (Фаза D). PNA требует deg."""
     name = name.lower()
-    if name in ("gine", "gin", "edgegnn"):
+    if name in ("gine", "gin", "edgegnn", "pna"):
+        conv_type = "pna" if name == "pna" else "gine"
         return EdgeGNN(in_node, in_edge, hidden, num_layers, dropout,
                        reverse_mp=reverse_mp, ports=ports, ego_ids=ego_ids,
-                       in_edge_label=in_edge_label, edge_updates=edge_updates)
-    raise ValueError(f"Неизвестная edge-архитектура: {name!r} (gine)")
+                       in_edge_label=in_edge_label, edge_updates=edge_updates,
+                       conv_type=conv_type, deg=deg)
+    raise ValueError(f"Неизвестная edge-архитектура: {name!r} (gine|pna)")
 
 
 def build_model(

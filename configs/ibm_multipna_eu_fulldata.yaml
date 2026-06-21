@@ -1,0 +1,47 @@
+# L6 — ЦЕЛЕВОЙ «сильный режим»: Multi-PNA + edge-updates (Egressy 2024 SOTA-рецепт).
+# PNA-агрегатор + полный мультиграфовый стек (reverse+port+ego) + EU, большие
+# окрестности/глубина. Верхняя точка лестницы перехода слабый→сильный.
+# Протокол (full_data, pos_weight, num_neighbors, hidden, num_layers, epochs)
+# ИДЕНТИЧЕН L3–L6 — между шагами меняется только архитектурный рычаг.
+seed: 42
+device: cuda            # Colab A100; на Mac без CUDA откатится на cpu (smoke)
+
+dataset:
+  include_time: false   # no-time режим (time при temporal split вредит)
+  name: ibm_aml
+  root: data/ibm_aml
+  variant: HI-Small
+  # max_rows: 500000    # smoke перед полным прогоном (см. план T3)
+
+model:
+  type: pna             # главный рычаг: PNA вместо GINe
+  params:
+    hidden: 64
+    num_layers: 3
+    dropout: 0.2
+    reverse_mp: true
+    ports: true
+    ego_ids: true
+    edge_updates: true   # GIN/PNA+EU — +19пп у Egressy
+
+train:
+  full_data: true        # все train-рёбра + class weights (не сабсэмпл)
+  pos_weight: 100        # авто neg/pos (~1290) коллапсирует в «всё-позитив»
+  num_neighbors: [50, 50, 50]   # A100: можно [100,100,100]; держать = по L3–L6
+  batch_size: 4096
+  neg_ratio: 20
+  val_neg_cap: 50000
+  epochs: 60
+  patience: 10
+  lr: 0.003
+  weight_decay: 0.0005
+
+output_dir: results
+output_name: ibm_multipna_eu_fulldata
+checkpoint_dir: checkpoints
+save_checkpoint: true
+
+wandb:
+  enabled: false         # включить на Colab при наличии API-ключа
+  project: gnn-aml
+  entity: null

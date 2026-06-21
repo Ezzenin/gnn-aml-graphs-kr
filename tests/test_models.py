@@ -3,9 +3,16 @@
 compute_ports — различение кратных рёбер мультиграфа; EdgeGNN.forward с флагами
 reverse/port/ego должен отрабатывать без ошибок формы и давать 2 логита на ребро.
 """
+import pytest
 import torch
 
-from src.models import EdgeGNN, add_reverse_edges, build_edge_model, compute_ports
+from src.models import (
+    EdgeGNN,
+    add_reverse_edges,
+    build_edge_model,
+    compute_degree_histogram,
+    compute_ports,
+)
 
 
 def test_compute_ports_parallel_edges():
@@ -107,3 +114,31 @@ def test_edge_gnn_each_adaptation_independently():
         model = EdgeGNN(in_node=5, in_edge=6, hidden=16, **flags)
         out = model(x, ei, ea, eli, ela)
         assert out.shape == (4, 2), f"сломалось на {flags}"
+
+
+def test_edge_gnn_pna_forward_shape():
+    # Сильный режим: conv_type='pna' (главный архитектурный рычаг Egressy).
+    x, ei, ea, eli, ela = _toy_batch()
+    deg = compute_degree_histogram(ei, num_nodes=8)
+    model = build_edge_model("pna", in_node=5, in_edge=6, hidden=16, deg=deg)
+    assert model.conv_type == "pna"
+    out = model(x, ei, ea, eli, ela)
+    assert out.shape == (4, 2)
+
+
+def test_edge_gnn_pna_with_full_stack_and_eu():
+    # Multi-PNA+EU (целевой L6): PNA + reverse-флаг + port + ego + edge-updates.
+    x, ei, _, eli, ela = _toy_batch()
+    ea7 = torch.randn(12, 7)  # reverse_mp уже добавил флаг направления в данные
+    deg = compute_degree_histogram(ei, num_nodes=8)
+    model = EdgeGNN(in_node=5, in_edge=7, in_edge_label=6, hidden=16, deg=deg,
+                    conv_type="pna", reverse_mp=True, ports=True, ego_ids=True,
+                    edge_updates=True)
+    out = model(x, ei, ea7, eli, ela)
+    assert out.shape == (4, 2)
+
+
+def test_edge_gnn_pna_requires_deg():
+    # PNA без deg-гистограммы должен явно падать (а не молча собирать GINe).
+    with pytest.raises(ValueError, match="deg"):
+        build_edge_model("pna", in_node=5, in_edge=6, hidden=16)

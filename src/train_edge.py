@@ -91,11 +91,15 @@ def run(config: dict) -> dict:
     print(f"[device] {device}")
 
     ds_cfg = config.get("dataset", {})
+    # test/val_fraction конфигурируемы (дефолт 65/15/20). Для внешней сопоставимости
+    # с Egressy задаётся 60/20/20 (val_fraction=0.2) — см. ibm_multipna_eu_egressy.
     data, meta = load_ibm_aml(
         root=ds_cfg.get("root", "data/ibm_aml"),
         variant=ds_cfg.get("variant", "HI-Small"),
         max_rows=ds_cfg.get("max_rows"),
         include_time=ds_cfg.get("include_time", True),
+        test_fraction=float(ds_cfg.get("test_fraction", 0.2)),
+        val_fraction=float(ds_cfg.get("val_fraction", 0.15)),
     )
     label = data.edge_label.numpy()
 
@@ -152,8 +156,20 @@ def run(config: dict) -> dict:
     in_edge_label = data.edge_attr.shape[1]             # сырые признаки сид-ребра (P0.2)
     seed_attr_train = data.edge_attr[train_idx].float()
 
+    # PNA (сильный режим) требует гистограмму степеней — считаем на TRAIN-контексте
+    # (тот же граф, что видят свёртки; для reverse_mp уже двунаправлен). На train+val
+    # деги не считаем — это была бы утечка статистики будущего в обучение.
+    conv_type = model_cfg.get("type", "gine")
+    deg = None
+    if conv_type == "pna":
+        from src.models import compute_degree_histogram
+
+        deg = compute_degree_histogram(train_ctx.edge_index, train_ctx.num_nodes)
+        print(f"[pna] deg-гистограмма train-контекста: {deg.numel()} бинов "
+              f"(max in-degree {deg.numel() - 1})")
+
     model = build_edge_model(
-        model_cfg.get("type", "gine"),
+        conv_type,
         in_node=data.x.shape[1], in_edge=in_edge_eff, in_edge_label=in_edge_label,
         hidden=int(m_params.get("hidden", 64)),
         num_layers=int(m_params.get("num_layers", 2)),
@@ -162,6 +178,7 @@ def run(config: dict) -> dict:
         ports=bool(m_params.get("ports", False)),
         ego_ids=bool(m_params.get("ego_ids", False)),
         edge_updates=bool(m_params.get("edge_updates", False)),
+        deg=deg,
     ).to(device)
     print(f"[model] {model_cfg.get('type','gine')} | params={sum(p.numel() for p in model.parameters()):,}")
 

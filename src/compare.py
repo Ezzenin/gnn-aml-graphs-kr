@@ -75,6 +75,24 @@ IBM_VARIANTS_EU = [
     ("ibm_multignn_fulldata", "Multi-GNN"),
     ("ibm_multignn_eu_fulldata", "Multi-GNN+EU"),
 ]
+# Лестница перехода «слабый → сильный режим» (главный нарратив работы): по одному
+# рычагу за шаг при ФИКСИРОВАННОМ протоколе. L0–L2 — слабый режим ([10,10]/2 слоя),
+# L3 — те же адаптации при больших окрестностях/глубине, L4–L6 — смена агрегатора
+# на PNA (Egressy 2024) вплоть до целевого Multi-PNA+EU. XGBoost(+fan) — референс.
+IBM_VARIANTS_LADDER = [
+    ("ibm_xgboost_notime", "XGBoost"),
+    ("ibm_xgboost_fan", "XGBoost+fan"),
+    ("ibm_gine_fulldata", "L0 GINe"),
+    ("ibm_multignn_fulldata", "L1 Multi-GNN"),
+    ("ibm_multignn_eu_fulldata", "L2 +EU"),
+    ("ibm_multignn_big_fulldata", "L3 big-nbr"),
+    ("ibm_pna_fulldata", "L4 PNA"),
+    ("ibm_multipna_fulldata", "L5 Multi-PNA"),
+    ("ibm_multipna_eu_fulldata", "L6 Multi-PNA+EU"),
+]
+# Табличные референсы лестницы — рисуются горизонтальными линиями, не шагами.
+LADDER_REFS = {"XGBoost", "XGBoost+fan"}
+
 IBM_METRIC_KEYS = ["auc_pr", "f1", "recall_at_precision_90", "recall"]
 # Опубликованные F1-minority (%) на AML Small HI — для справки, НЕ сравнивать в одну
 # колонку с нашими (другой сплит 60/20/20, обучение на всех рёбрах). См. docs/lit_benchmarks.md.
@@ -104,6 +122,7 @@ PER_PATTERN_FAMILIES = [
     ("ibm_xgboost_fan", "XGBoost+fan"),
     ("ibm_gine_fulldata", "GINe (base)"),
     ("ibm_multignn_fulldata", "Multi-GNN"),
+    ("ibm_multipna_eu_fulldata", "Multi-PNA+EU"),  # целевой L6 сильного режима
     ("ibm_heuristics", "Эвристики"),
 ]
 
@@ -238,8 +257,13 @@ def collect_ibm(results_dir: str = "results", variants=IBM_VARIANTS) -> list[dic
 
 
 def write_ibm_table(rows: list[dict], results_dir: str = "results",
-                    name: str = "ibm_comparison", regime: str = "") -> None:
-    """Сводная таблица IBM (CSV + Markdown): XGBoost vs base GNN vs +адаптации."""
+                    name: str = "ibm_comparison", regime: str = "",
+                    title: str = "бейзлайн + ablation Multi-GNN",
+                    intro: str | None = None) -> None:
+    """Сводная таблица IBM (CSV + Markdown): XGBoost vs base GNN vs +адаптации.
+
+    title/intro переопределяются для лестницы перехода (иной нарратив, чем ablation).
+    """
     import csv
 
     cols = ["variant"] + IBM_METRIC_KEYS
@@ -259,9 +283,10 @@ def write_ibm_table(rows: list[dict], results_dir: str = "results",
     lines = [header, sep]
     for r in rows:
         lines.append("| " + " | ".join([str(r["variant"])] + [fmt(r.get(k)) for k in IBM_METRIC_KEYS]) + " |")
-    md = (f"# IBM AML HI-Small (test): бейзлайн + ablation Multi-GNN{regime}\n\n"
-          "Главные метрики: AUC-PR и F1 (позитив = laundering). Ablation: вклад\n"
-          "адаптаций reverse / port / ego поверх базовой GINe (RQ2).\n\n"
+    default_intro = ("Главные метрики: AUC-PR и F1 (позитив = laundering). Ablation: вклад\n"
+                     "адаптаций reverse / port / ego поверх базовой GINe (RQ2).")
+    md = (f"# IBM AML HI-Small (test): {title}{regime}\n\n"
+          + (intro if intro is not None else default_intro) + "\n\n"
           + "\n".join(lines) + "\n"
           + _literature_block())
     with open(md_path, "w", encoding="utf-8") as f:
@@ -340,6 +365,51 @@ def plot_ablation(rows: list[dict], results_dir: str = "results",
     ax.set_xticklabels(variants, rotation=15, ha="right")
     ax.set_ylabel("score")
     ax.set_title(f"IBM AML: ablation мультиграфовых адаптаций{regime} (пунктир = base GINe)")
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    out = os.path.join(results_dir, f"{out_name}.png")
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    print(f"[saved] {out}")
+
+
+def plot_ladder(rows: list[dict], results_dir: str = "results",
+                out_name: str = "transition_ladder") -> None:
+    """Главный визуал работы: F1/AUC-PR карабкаются по шагам L0→L6 (слабый→сильный).
+
+    Линии AUC-PR и F1-minority по шагам лестницы; XGBoost(+fan) — горизонтальные
+    референс-линии. Показывает, КАКОЙ рычаг закрывает разрыв до табличного бейзлайна.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    by = {r["variant"]: r for r in rows}
+    steps = [r for r in rows if r["variant"] not in LADDER_REFS]
+    if len(steps) < 2:
+        print("[ladder] <2 шагов лестницы — график пропущен")
+        return
+
+    labels = [r["variant"] for r in steps]
+    f1 = [r.get("f1") or 0 for r in steps]
+    auc = [r.get("auc_pr") or 0 for r in steps]
+    x = np.arange(len(steps))
+
+    fig, ax = plt.subplots(figsize=(max(8, len(steps) * 1.4), 5))
+    ax.plot(x, auc, "-o", color="#4c72b0", label="AUC-PR")
+    ax.plot(x, f1, "-s", color="#c44e52", label="F1-minority")
+    for ref, color in (("XGBoost", "black"), ("XGBoost+fan", "#888888")):
+        if ref in by:
+            v = by[ref].get("auc_pr") or 0
+            ax.axhline(v, ls=":", lw=1.3, color=color, alpha=0.8,
+                       label=f"{ref} AUC-PR ({v:.3f})")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_ylabel("score")
+    ax.set_title("IBM AML: переход слабый→сильный режим GNN (L0→L6)")
     ax.legend(fontsize=8)
     fig.tight_layout()
     out = os.path.join(results_dir, f"{out_name}.png")
@@ -495,6 +565,24 @@ def summarize_ibm(results_dir: str = "results") -> None:
         print("\n=== режим full-data + edge-updates (GIN+EU) ===")
         write_ibm_table(rows_eu, results_dir, name="ibm_comparison_eu",
                         regime=" (full-data + edge-updates)")
+
+    # Лестница перехода слабый→сильный (L0…L6) — собирается по мере появления
+    # шагов сильного режима (PNA/большие окрестности). Главный визуал работы.
+    rows_ladder = collect_ibm(results_dir, IBM_VARIANTS_LADDER)
+    n_steps = len([r for r in rows_ladder if r["variant"] not in LADDER_REFS])
+    if n_steps >= 2:
+        print("\n=== лестница перехода слабый→сильный (L0→L6) ===")
+        write_ibm_table(
+            rows_ladder, results_dir, name="ibm_ladder",
+            regime=" (L0→L6)",
+            title="лестница перехода слабый→сильный режим GNN",
+            intro=("Метрики: AUC-PR и F1-minority (позитив = laundering). Каждый шаг "
+                   "добавляет ОДИН рычаг при фиксированном протоколе (full-data/no-time,\n"
+                   "pos_weight=100, единые окрестности/глубина для L3–L6): L0–L2 — слабый "
+                   "режим ([10,10]/2 слоя), L3 — те же адаптации при больших окрестностях,\n"
+                   "L4–L6 — смена агрегатора на PNA вплоть до целевого Multi-PNA+EU "
+                   "(Egressy 2024). XGBoost(+fan) — табличный референс (горизонтали)."))
+        plot_ladder(rows_ladder, results_dir)
 
     summarize_per_pattern(results_dir)
 
