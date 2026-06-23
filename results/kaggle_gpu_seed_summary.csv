@@ -1,0 +1,12 @@
+file,output_name,seed,model,auc_pr,f1,roc_auc,r_at_p90,recall
+ibm_pna_fulldata_metrics.json,ibm_pna_fulldata,42.0,pna,0.05909421914332141,0.08718726307808947,0.9639428308389842,0.0,0.06395995550611791
+ibm_multipna_fulldata_metrics.json,ibm_multipna_fulldata,,pna,0.0574,0.096,,0.0,
+ibm_gine_port_fulldata_metrics.json,ibm_gine_port_fulldata,42.0,gine,0.054189000621120226,0.11138014527845036,0.9442622400329554,0.0,0.12791991101223582
+ibm_multignn_fulldata_metrics.json,ibm_multignn_fulldata,42.0,gine,0.05172617466863148,0.1233278955954323,0.9170725426343432,0.0,0.10511679644048944
+ibm_gine_fulldata_metrics.json,ibm_gine_fulldata,42.0,gine,0.042744381037710555,0.11990049751243781,0.9408179817255773,0.0,0.13403781979977752
+ibm_multignn_big_fulldata_metrics.json,ibm_multignn_big_fulldata,42.0,gine,0.042305282089906346,0.09567470599960136,0.9600345066556478,0.0,0.13348164627363737
+ibm_gine_rev_fulldata_metrics.json,ibm_gine_rev_fulldata,42.0,gine,0.04011532887597006,0.08314193844740468,0.9267117654662523,0.0,0.10066740823136819
+ibm_multipna_eu_fulldata_metrics.json,ibm_multipna_eu_fulldata,,pna,0.0401,0.095,,0.0,
+ibm_multignn_eu_fulldata_metrics.json,ibm_multignn_eu_fulldata,42.0,gine,0.034645908924460046,0.11527178602243313,0.9471891604997835,0.0,0.185761957730812
+ibm_gine_ego_fulldata_metrics.json,ibm_gine_ego_fulldata,42.0,gine,0.032671955019498176,0.08099847172694855,0.9317637213393134,0.0,0.26529477196885426
+ibm_gine_eu_fulldata_metrics.json,ibm_gine_eu_fulldata,42.0,gine,0.02600802693576729,0.05868026486033945,0.9291643363609964,0.0,0.42880978865406005
