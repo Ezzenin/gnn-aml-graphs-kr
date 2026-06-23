@@ -1,14 +1,62 @@
 {
-  "_note": "reconstructed_from_run_log (vast.ai A100); per_pattern f1 не сохранён",
+  "_note": "Reconstructed from run log (vast.ai A100). Full per-pattern metrics, threshold, precision, recall and ROC-AUC were not saved by the original run.",
+  "result_status": "summary_only",
+  "config": {
+    "dataset": {
+      "include_time": false,
+      "name": "ibm_aml",
+      "root": "data/ibm_aml",
+      "variant": "HI-Small"
+    },
+    "model": {
+      "type": "pna",
+      "params": {
+        "hidden": 64,
+        "num_layers": 3,
+        "dropout": 0.2,
+        "reverse_mp": true,
+        "ports": true,
+        "ego_ids": true,
+        "edge_updates": false
+      }
+    },
+    "train": {
+      "full_data": true,
+      "pos_weight": 100,
+      "num_neighbors": [50, 50, 50],
+      "batch_size": 4096,
+      "epochs": 60,
+      "patience": 10,
+      "lr": 0.003,
+      "weight_decay": 0.0005
+    },
+    "output_name": "ibm_multipna_fulldata"
+  },
+  "dataset_meta": null,
   "model_type": "pna",
   "model_params": 236162,
+  "fixed_threshold_from_val": null,
   "val_metrics": {
     "auc_pr": 0.0447,
-    "f1": 0.0962
+    "roc_auc": null,
+    "f1": 0.0962,
+    "precision": null,
+    "recall": null,
+    "recall_at_precision_90": null,
+    "threshold": null
   },
   "test_metrics": {
     "auc_pr": 0.0574,
+    "roc_auc": null,
     "f1": 0.096,
-    "recall_at_precision_90": 0.0
+    "precision": null,
+    "recall": null,
+    "recall_at_precision_90": 0.0,
+    "threshold": null
+  },
+  "per_pattern": null,
+  "metrics_completeness": {
+    "full_metrics": false,
+    "missing": ["threshold", "precision", "recall", "roc_auc", "per_pattern"]
   }
 }

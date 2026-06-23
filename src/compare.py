@@ -95,6 +95,49 @@ IBM_VARIANTS_LADDER = [
 LADDER_REFS = {"XGBoost", "XGBoost+fan"}
 
 IBM_METRIC_KEYS = ["auc_pr", "f1", "recall_at_precision_90", "recall"]
+IBM_ALL_METRIC_KEYS = ["auc_pr", "f1", "roc_auc", "recall_at_precision_90", "precision", "recall"]
+
+# Единый реестр всех IBM-вариантов, которые уже встречаются в results/.
+# Режим нужен для группировки в общей таблице и графиках.
+IBM_ALL_VARIANTS = [
+    ("ibm_xgboost", "XGBoost", "Tabular", "with norm_time"),
+    ("ibm_xgboost_notime", "XGBoost no-time", "Tabular", "no-time"),
+    ("ibm_xgboost_fan", "XGBoost+fan", "Tabular", "fan features"),
+    ("hybrid_xgb_raw_edge", "XGBoost raw-edge", "Hybrid test", "raw edge attrs"),
+    ("hybrid_gine_emb_xgb", "GINe emb -> XGBoost", "Hybrid", "GNN embedding"),
+    ("ibm_hybrid_gnn_xgb", "Multi-GNN emb -> XGBoost", "Hybrid", "GNN embedding"),
+    ("ibm_gine", "GINe", "GNN: GINe", "with norm_time"),
+    ("ibm_gine_rev", "GINe + reverse", "GNN: GINe", "with norm_time"),
+    ("ibm_gine_port", "GINe + port", "GNN: GINe", "with norm_time"),
+    ("ibm_gine_ego", "GINe + ego", "GNN: GINe", "with norm_time"),
+    ("ibm_multignn", "Multi-GNN", "GNN: GINe", "with norm_time"),
+    ("ibm_gine_notime", "GINe", "GNN: GINe", "no-time"),
+    ("ibm_gine_rev_notime", "GINe + reverse", "GNN: GINe", "no-time"),
+    ("ibm_gine_port_notime", "GINe + port", "GNN: GINe", "no-time"),
+    ("ibm_gine_ego_notime", "GINe + ego", "GNN: GINe", "no-time"),
+    ("ibm_multignn_notime", "Multi-GNN", "GNN: GINe", "no-time"),
+    ("ibm_gine_fulldata", "GINe", "GNN: GINe", "full-data/no-time"),
+    ("ibm_gine_rev_fulldata", "GINe + reverse", "GNN: GINe", "full-data/no-time"),
+    ("ibm_gine_port_fulldata", "GINe + port", "GNN: GINe", "full-data/no-time"),
+    ("ibm_gine_ego_fulldata", "GINe + ego", "GNN: GINe", "full-data/no-time"),
+    ("ibm_multignn_fulldata", "Multi-GNN", "GNN: GINe", "full-data/no-time"),
+    ("ibm_gine_eu_fulldata", "GINe + EU", "GNN: GINe+EU", "full-data/no-time"),
+    ("ibm_multignn_eu_fulldata", "Multi-GNN + EU", "GNN: GINe+EU", "full-data/no-time"),
+    ("ibm_multignn_big_fulldata", "Multi-GNN + EU big-nbr", "GNN: GINe+EU", "big/full-data"),
+    ("ibm_pna_fulldata", "PNA", "GNN: PNA", "big/full-data"),
+    ("ibm_multipna_fulldata", "Multi-PNA", "GNN: PNA", "big/full-data"),
+    ("ibm_multipna_eu_fulldata", "Multi-PNA + EU", "GNN: PNA", "big/full-data"),
+    ("ibm_heuristics", "Degree heuristics", "Heuristics", "no-time"),
+]
+
+IBM_ABLATION_HEATMAP = [
+    ("GINe", ["ibm_gine", "ibm_gine_notime", "ibm_gine_fulldata"]),
+    ("+reverse", ["ibm_gine_rev", "ibm_gine_rev_notime", "ibm_gine_rev_fulldata"]),
+    ("+port", ["ibm_gine_port", "ibm_gine_port_notime", "ibm_gine_port_fulldata"]),
+    ("+ego", ["ibm_gine_ego", "ibm_gine_ego_notime", "ibm_gine_ego_fulldata"]),
+    ("Multi-GNN", ["ibm_multignn", "ibm_multignn_notime", "ibm_multignn_fulldata"]),
+]
+IBM_ABLATION_HEATMAP_COLS = ["with time", "no-time", "full-data"]
 # Опубликованные F1-minority (%) на AML Small HI — для справки, НЕ сравнивать в одну
 # колонку с нашими (другой сплит 60/20/20, обучение на всех рёбрах). См. docs/lit_benchmarks.md.
 LITERATURE_F1_HI = [
@@ -255,6 +298,145 @@ def collect_ibm(results_dir: str = "results", variants=IBM_VARIANTS) -> list[dic
         row.update({k: test.get(k) for k in IBM_METRIC_KEYS})
         rows.append(row)
     return rows
+
+
+def _metrics_from_json(path: str) -> dict:
+    """Прочитать JSON результата и вернуть test_metrics (если есть)."""
+    with open(path, "r", encoding="utf-8") as f:
+        d = json.load(f)
+    return d.get("test_metrics", {}) or {}
+
+
+def _hybrid_embedded_rows(results_dir: str = "results") -> dict[str, dict]:
+    """Строки из comparison-блока гибридного эксперимента.
+
+    В `ibm_hybrid_gnn_xgb_metrics.json` несколько сравнений лежат внутри одного
+    файла: raw-edge XGBoost, GINe-embedding hybrid и Multi-GNN-embedding hybrid.
+    Для общей таблицы представляем их как отдельные строки.
+    """
+    path = os.path.join(results_dir, "ibm_hybrid_gnn_xgb_metrics.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        comparison = json.load(f).get("comparison", {}) or {}
+    return {
+        "hybrid_xgb_raw_edge": comparison.get("xgboost_raw_edge", {}),
+        "hybrid_gine_emb_xgb": comparison.get("hybrid_gine_emb_xgb", {}),
+        "ibm_hybrid_gnn_xgb": (
+            comparison.get("hybrid_multignn_emb_xgb", {})
+            or comparison.get("hybrid_embedding_xgb", {})
+        ),
+    }
+
+
+def collect_ibm_all(results_dir: str = "results") -> list[dict]:
+    """Единая таблица всех IBM-вариантов: режимы, сильная лестница и гибриды."""
+    hybrid_rows = _hybrid_embedded_rows(results_dir)
+    rows = []
+    for name, label, family, regime in IBM_ALL_VARIANTS:
+        path = os.path.join(results_dir, f"{name}_metrics.json")
+        if name in hybrid_rows and hybrid_rows[name]:
+            test = hybrid_rows[name]
+            source = "ibm_hybrid_gnn_xgb_metrics.json"
+        elif os.path.exists(path):
+            test = _metrics_from_json(path)
+            source = os.path.basename(path)
+        else:
+            continue
+        row = {
+            "name": name,
+            "variant": label,
+            "family": family,
+            "regime": regime,
+            "source": source,
+        }
+        row.update({k: test.get(k) for k in IBM_ALL_METRIC_KEYS})
+        rows.append(row)
+    return rows
+
+
+def _best_by(rows: list[dict], family: str, metric: str = "auc_pr") -> dict | None:
+    vals = [r for r in rows if r["family"] == family and isinstance(r.get(metric), (int, float))]
+    if not vals:
+        return None
+    return max(vals, key=lambda r: r[metric])
+
+
+def write_ibm_all_table(rows: list[dict], results_dir: str = "results") -> None:
+    """Записать общий рейтинг всех IBM-экспериментов в CSV и Markdown."""
+    import csv
+
+    if not rows:
+        return
+
+    csv_path = os.path.join(results_dir, "ibm_all_variants.csv")
+    md_path = os.path.join(results_dir, "ibm_all_variants.md")
+    cols = ["family", "regime", "variant"] + IBM_ALL_METRIC_KEYS + ["source"]
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+
+    ranked = sorted(
+        rows,
+        key=lambda r: (isinstance(r.get("auc_pr"), (int, float)), r.get("auc_pr") or 0),
+        reverse=True,
+    )
+
+    def fmt(v):
+        return f"{v:.4f}" if isinstance(v, (int, float)) else "—"
+
+    header = "| " + " | ".join(cols[:-1]) + " |"
+    sep = "|" + "|".join(["---"] * (len(cols) - 1)) + "|"
+    lines = [header, sep]
+    for r in ranked:
+        lines.append("| " + " | ".join(
+            [str(r[c]) if c in ("family", "regime", "variant") else fmt(r.get(c)) for c in cols[:-1]]
+        ) + " |")
+
+    best_overall = ranked[0]
+    best_gnn = max(
+        [r for r in rows if r["family"].startswith("GNN") and isinstance(r.get("auc_pr"), (int, float))],
+        key=lambda r: r["auc_pr"],
+    )
+    best_tab = _best_by(rows, "Tabular")
+    best_hybrid = _best_by(rows, "Hybrid")
+    intro = [
+        "# IBM AML HI-Small: все рассмотренные варианты (test)",
+        "",
+        "Единая таблица для отчета: табличные бейзлайны, все режимы GINe/Multi-GNN,",
+        "edge-updates, сильная PNA-лестница, эвристики и гибрид GNN→XGBoost.",
+        "Главная сортировка ниже — по AUC-PR на test.",
+        "",
+        "## Короткий вывод",
+        "",
+        f"- Лучший общий вариант: **{best_overall['variant']}** "
+        f"({best_overall['family']}, AUC-PR {best_overall['auc_pr']:.3f}, F1 {fmt(best_overall.get('f1'))}).",
+        f"- Лучший standalone GNN: **{best_gnn['variant']}** "
+        f"({best_gnn['regime']}, AUC-PR {best_gnn['auc_pr']:.3f}, F1 {fmt(best_gnn.get('f1'))}).",
+    ]
+    if best_tab is not None:
+        intro.append(f"- Лучший табличный baseline из отдельных прогонов: **{best_tab['variant']}** "
+                     f"(AUC-PR {best_tab['auc_pr']:.3f}).")
+    if best_hybrid is not None:
+        intro.append(f"- Лучший гибрид: **{best_hybrid['variant']}** "
+                     f"(AUC-PR {best_hybrid['auc_pr']:.3f}); это показывает, что графовый эмбеддинг "
+                     "полезен как представление, хотя standalone GNN слабее XGBoost.")
+    intro += [
+        "",
+        "## Рейтинг",
+        "",
+        *lines,
+        "",
+        "Примечание: строки `Multi-PNA` и `Multi-PNA + EU` восстановлены из run log,",
+        "поэтому для них отсутствуют `precision`, `recall`, `ROC-AUC` и threshold.",
+        "",
+    ]
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(intro))
+
+    print(f"\n[saved] {csv_path}\n[saved] {md_path}")
 
 
 def write_ibm_table(rows: list[dict], results_dir: str = "results",
@@ -419,6 +601,149 @@ def plot_ladder(rows: list[dict], results_dir: str = "results",
     print(f"[saved] {out}")
 
 
+def plot_ibm_all_ranking(rows: list[dict], results_dir: str = "results") -> None:
+    """Горизонтальный рейтинг всех IBM-вариантов по AUC-PR с F1-маркерами."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    vals = [r for r in rows if isinstance(r.get("auc_pr"), (int, float))]
+    if not vals:
+        return
+    vals = sorted(vals, key=lambda r: r["auc_pr"])
+    labels = [f"{r['variant']} [{r['regime']}]" for r in vals]
+    auc = [r["auc_pr"] for r in vals]
+    f1 = [r.get("f1") if isinstance(r.get("f1"), (int, float)) else np.nan for r in vals]
+    colors = {
+        "Tabular": "#4c72b0",
+        "Hybrid test": "#8172b3",
+        "Hybrid": "#8172b3",
+        "GNN: GINe": "#55a868",
+        "GNN: GINe+EU": "#dd8452",
+        "GNN: PNA": "#c44e52",
+        "Heuristics": "#888888",
+    }
+    bar_colors = [colors.get(r["family"], "#999999") for r in vals]
+
+    y = np.arange(len(vals))
+    fig_h = max(7, len(vals) * 0.34)
+    fig, ax = plt.subplots(figsize=(11, fig_h))
+    ax.barh(y, auc, color=bar_colors, alpha=0.88, label="AUC-PR")
+    ax.scatter(f1, y, color="black", s=18, label="F1", zorder=3)
+    for yi, v in zip(y, auc):
+        ax.text(v + 0.004, yi, f"{v:.3f}", va="center", fontsize=7)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=8)
+    ax.set_xlabel("score")
+    ax.set_title("IBM AML: рейтинг всех рассмотренных вариантов (test)")
+    ax.set_xlim(0, max(auc) * 1.16)
+    ax.grid(axis="x", alpha=0.2)
+    ax.legend(loc="lower right", fontsize=8)
+    fig.tight_layout()
+    out = os.path.join(results_dir, "ibm_all_variants_ranking.png")
+    fig.savefig(out, dpi=170)
+    plt.close(fig)
+    print(f"[saved] {out}")
+
+
+def plot_ibm_ablation_heatmap(results_dir: str = "results") -> None:
+    """Heatmap AUC-PR: GINe/Multi-GNN адаптации × режимы обучения."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    matrix = []
+    row_labels = []
+    for label, names in IBM_ABLATION_HEATMAP:
+        row = []
+        for name in names:
+            path = os.path.join(results_dir, f"{name}_metrics.json")
+            if not os.path.exists(path):
+                row.append(np.nan)
+            else:
+                row.append(_metrics_from_json(path).get("auc_pr", np.nan))
+        matrix.append(row)
+        row_labels.append(label)
+    arr = np.asarray(matrix, dtype=float)
+    if np.isnan(arr).all():
+        return
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    im = ax.imshow(arr, cmap="YlGnBu", vmin=0, vmax=np.nanmax(arr) * 1.15)
+    ax.set_xticks(np.arange(len(IBM_ABLATION_HEATMAP_COLS)))
+    ax.set_xticklabels(IBM_ABLATION_HEATMAP_COLS)
+    ax.set_yticks(np.arange(len(row_labels)))
+    ax.set_yticklabels(row_labels)
+    ax.set_title("IBM AML: AUC-PR адаптаций GINe по режимам")
+    for i in range(arr.shape[0]):
+        for j in range(arr.shape[1]):
+            txt = "—" if np.isnan(arr[i, j]) else f"{arr[i, j]:.3f}"
+            ax.text(j, i, txt, ha="center", va="center", color="black", fontsize=9)
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="AUC-PR")
+    fig.tight_layout()
+    out = os.path.join(results_dir, "ibm_ablation_heatmap.png")
+    fig.savefig(out, dpi=170)
+    plt.close(fig)
+    print(f"[saved] {out}")
+
+
+def plot_ibm_family_best(rows: list[dict], results_dir: str = "results") -> None:
+    """Лучший результат по семействам: Tabular / Hybrid / GINe / PNA / Heuristics."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    families = ["Hybrid", "Tabular", "GNN: PNA", "GNN: GINe", "GNN: GINe+EU", "Heuristics"]
+    best_rows = []
+    for fam in families:
+        r = _best_by(rows, fam)
+        if r is not None:
+            best_rows.append(r)
+    if not best_rows:
+        return
+    def short_label(r):
+        family = r["family"].replace("GNN: ", "")
+        variant = (
+            r["variant"]
+            .replace("XGBoost", "XGB")
+            .replace("Multi-GNN emb -> XGB", "Multi-GNN emb->XGB")
+            .replace("Multi-GNN + EU big-nbr", "Multi-GNN+EU big")
+            .replace("Degree heuristics", "degree heuristics")
+        )
+        return f"{family}\n{variant}"
+
+    labels = [short_label(r) for r in best_rows]
+    auc = [r.get("auc_pr") or 0 for r in best_rows]
+    f1 = [r.get("f1") or 0 for r in best_rows]
+
+    x = np.arange(len(best_rows))
+    width = 0.38
+    fig, ax = plt.subplots(figsize=(max(10, len(best_rows) * 1.7), 4.8))
+    ax.bar(x - width / 2, auc, width, label="AUC-PR", color="#4c72b0")
+    ax.bar(x + width / 2, f1, width, label="F1", color="#c44e52")
+    for i, v in enumerate(auc):
+        ax.text(i - width / 2, v + 0.006, f"{v:.3f}", ha="center", fontsize=8)
+    for i, v in enumerate(f1):
+        ax.text(i + width / 2, v + 0.006, f"{v:.3f}", ha="center", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_ylabel("score")
+    ax.set_title("IBM AML: лучшие варианты по семействам")
+    ax.set_ylim(0, max(max(auc), max(f1)) * 1.24)
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    out = os.path.join(results_dir, "ibm_family_best.png")
+    fig.savefig(out, dpi=170)
+    plt.close(fig)
+    print(f"[saved] {out}")
+
+
 # ───────────────────── Per-pattern разбивка (RQ3, Фаза E) ─────────────────────
 def collect_per_pattern(results_dir: str = "results") -> tuple[list[str], dict]:
     """Собрать per_pattern.f1 по семействам из results/ibm_*_metrics.json.
@@ -538,6 +863,14 @@ def summarize_ibm(results_dir: str = "results") -> None:
     if not rows:
         print("Нет IBM-результатов в", results_dir, "(прогони --run-ibm на ПК с CUDA)")
         return
+    rows_all = collect_ibm_all(results_dir)
+    if rows_all:
+        print("\n=== все рассмотренные IBM-варианты ===")
+        write_ibm_all_table(rows_all, results_dir)
+        plot_ibm_all_ranking(rows_all, results_dir)
+        plot_ibm_family_best(rows_all, results_dir)
+        plot_ibm_ablation_heatmap(results_dir)
+
     write_ibm_table(rows, results_dir, name="ibm_comparison", regime=" (с norm_time)")
     plot_ablation(rows, results_dir, out_name="ablation", regime=" (с временем)")
 

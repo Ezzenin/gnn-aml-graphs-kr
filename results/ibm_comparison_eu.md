@@ -6,9 +6,9 @@
 | variant | auc_pr | f1 | recall_at_precision_90 | recall |
 |---|---|---|---|---|
 | XGBoost | 0.2398 | 0.2976 | 0.0217 | 0.3103 |
-| GINe (base) | 0.0537 | 0.1160 | 0.0000 | 0.1446 |
+| GINe (base) | 0.0427 | 0.1199 | 0.0000 | 0.1340 |
 | GINe+EU | 0.0260 | 0.0587 | 0.0000 | 0.4288 |
-| Multi-GNN | 0.0412 | 0.1133 | 0.0000 | 0.3254 |
+| Multi-GNN | 0.0517 | 0.1233 | 0.0000 | 0.1051 |
 | Multi-GNN+EU | 0.0346 | 0.1153 | 0.0000 | 0.1858 |
 
 ## Reference results (literature) — F1-minority, %

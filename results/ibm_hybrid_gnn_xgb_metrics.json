@@ -1,40 +1,180 @@
 {
-  "_note": "Гибрид GNN->XGBoost: эмбеддинг ребра GNN ([h_u||h_v||e_label], 192d) доп-фичами в XGBoost. Анти-утечка: train-ctx для train/val, train+val-ctx для test. Воспроизведение: python scripts/hybrid_gnn_xgb.py - checkpoints/<ckpt>.pt",
+  "_note": "Гибрид GNN->XGBoost: эмбеддинг ребра GNN ([h_u||h_v||e_label], 192d) доп-фичами в XGBoost.",
   "model_type": "hybrid_gnn_xgboost",
-  "headline": "hybrid_multignn_xgb test AUC-PR 0.348 — лучшая модель проекта",
-  "comparison": {
-    "xgboost_raw_edge": {
-      "auc_pr": 0.2884,
-      "f1": 0.3972,
-      "roc_auc": 0.963
+  "result_status": "full_metrics_from_script",
+  "config": {
+    "dataset": {
+      "name": "ibm_aml",
+      "variant": "HI-Small",
+      "include_time": false,
+      "max_rows": null
     },
-    "xgboost_full": {
-      "auc_pr": 0.2398,
-      "f1": 0.2976,
-      "roc_auc": 0.971
-    },
-    "best_gnn_standalone_pna": {
-      "auc_pr": 0.0993,
-      "f1": 0.1551,
-      "roc_auc": 0.955
-    },
-    "hybrid_gine_emb_xgb": {
-      "auc_pr": 0.3103,
-      "f1": 0.4032,
-      "roc_auc": 0.986,
-      "delta_vs_raw": 0.0219
-    },
-    "hybrid_multignn_emb_xgb": {
-      "auc_pr": 0.3478,
-      "f1": 0.4022,
-      "roc_auc": 0.97,
-      "delta_vs_raw": 0.0594
+    "checkpoint": "checkpoints/kaggle/ibm_multignn_fulldata.pt",
+    "output_name": "ibm_hybrid_gnn_xgb",
+    "xgboost_params": {
+      "n_estimators": 400,
+      "max_depth": 7,
+      "learning_rate": 0.1,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "n_jobs": 0,
+      "random_state": 42
     }
   },
-  "test_metrics": {
-    "auc_pr": 0.3478,
-    "f1": 0.4022,
-    "roc_auc": 0.97
+  "anti_leakage_audit": {
+    "train_embeddings_context": "train edges only",
+    "val_embeddings_context": "train edges only",
+    "test_embeddings_context": "train+val edges only",
+    "seed_edge_attr_source": "raw data.edge_attr for classified seed edge",
+    "xgboost_fit": "train mask only",
+    "threshold": "selected on val, applied to test"
   },
-  "finding": "монотонно: чем структурнее GNN (base GINe -> Multi-GNN rev+port+ego), тем больше прирост эмбеддинга в гибриде (+2.2пп -> +5.9пп) => сигнал от графовой структуры, не дубль табличных фич."
+  "dataset_meta": {
+    "variant": "HI-Small",
+    "num_nodes": 515088,
+    "num_edges": 5078345,
+    "num_node_features": 5,
+    "num_edge_features": 5,
+    "include_time": false,
+    "n_illicit": 5177,
+    "illicit_rate": 0.0010194266045335635,
+    "patterns_matched": 3209,
+    "patterns_total_illicit": 5177,
+    "pattern_counts": {
+      "bipartite": 263,
+      "cycle": 287,
+      "fan_in": 318,
+      "fan_out": 342,
+      "gather_scatter": 716,
+      "random": 191,
+      "scatter_gather": 626,
+      "stack": 466,
+      "unknown": 1968
+    },
+    "encoders": {
+      "receiving_currency": [
+        "US Dollar",
+        "Bitcoin",
+        "Euro",
+        "Australian Dollar",
+        "Yuan",
+        "Rupee",
+        "Mexican Peso",
+        "Yen",
+        "UK Pound",
+        "Ruble",
+        "Canadian Dollar",
+        "Swiss Franc",
+        "Brazil Real",
+        "Saudi Riyal",
+        "Shekel"
+      ],
+      "payment_currency": [
+        "US Dollar",
+        "Bitcoin",
+        "Euro",
+        "Australian Dollar",
+        "Yuan",
+        "Rupee",
+        "Yen",
+        "Mexican Peso",
+        "UK Pound",
+        "Ruble",
+        "Canadian Dollar",
+        "Swiss Franc",
+        "Brazil Real",
+        "Saudi Riyal",
+        "Shekel"
+      ],
+      "payment_format": [
+        "Reinvestment",
+        "Cheque",
+        "Credit Card",
+        "ACH",
+        "Cash",
+        "Wire",
+        "Bitcoin"
+      ]
+    },
+    "time_range_unix": [
+      1661990400,
+      1663517880
+    ],
+    "splits": {
+      "train": {
+        "n": 3300881,
+        "n_pos": 2556,
+        "pos_rate": 0.0007743387295694695
+      },
+      "val": {
+        "n": 761582,
+        "n_pos": 823,
+        "pos_rate": 0.0010806452883602817
+      },
+      "test": {
+        "n": 1015882,
+        "n_pos": 1798,
+        "pos_rate": 0.0017698905975300282
+      }
+    }
+  },
+  "comparison": {
+    "xgboost_raw_edge": {
+      "auc_pr": 0.28927682800635096,
+      "roc_auc": 0.961378857852326,
+      "f1": 0.4121357765094623,
+      "precision": 0.4480731548007838,
+      "recall": 0.38153503893214685,
+      "recall_at_precision_90": 0.0,
+      "n_pos": 1798,
+      "n_neg": 1014084,
+      "threshold": 0.9774448871612549
+    },
+    "xgboost_full": {
+      "auc_pr": 0.24838227585561026,
+      "roc_auc": 0.9678305678858994,
+      "f1": 0.2874291430476826,
+      "precision": 0.3588676103247294,
+      "recall": 0.2397107897664071,
+      "recall_at_precision_90": 0.02335928809788654,
+      "n_pos": 1798,
+      "n_neg": 1014084,
+      "threshold": 0.9892422556877136
+    },
+    "hybrid_embedding_xgb": {
+      "auc_pr": 0.3299057633254733,
+      "roc_auc": 0.9579254752703634,
+      "f1": 0.398121387283237,
+      "precision": 0.568041237113402,
+      "recall": 0.3064516129032258,
+      "recall_at_precision_90": 0.016129032258064516,
+      "n_pos": 1798,
+      "n_neg": 1014084,
+      "threshold": 0.9915466904640198,
+      "delta_vs_raw": 0.04062893531912232
+    }
+  },
+  "fixed_threshold_from_val": 0.9915466904640198,
+  "val_metrics": {
+    "auc_pr": 0.27484071994593334,
+    "roc_auc": 0.9486888667240819,
+    "f1": 0.3835616438356164,
+    "precision": 0.5132382892057027,
+    "recall": 0.30619684082624543,
+    "recall_at_precision_90": 0.0,
+    "n_pos": 823,
+    "n_neg": 760759,
+    "threshold": 0.9915466904640198
+  },
+  "test_metrics": {
+    "auc_pr": 0.3299057633254733,
+    "roc_auc": 0.9579254752703634,
+    "f1": 0.398121387283237,
+    "precision": 0.568041237113402,
+    "recall": 0.3064516129032258,
+    "recall_at_precision_90": 0.016129032258064516,
+    "n_pos": 1798,
+    "n_neg": 1014084,
+    "threshold": 0.9915466904640198
+  }
 }

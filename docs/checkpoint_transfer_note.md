@@ -13,10 +13,12 @@ no-time, `pos_weight=100`**. Добавлены через `git add -f` (в `.gi
 
 | чекпоинт | модель | test AUC-PR | test F1 | роль |
 |---|---|---|---|---|
-| **`checkpoints/ibm_gine_fulldata.pt`** | base GINe (без адаптаций) | **0.054** | 0.116 | **дефолт Streamlit** — лучший GNN по метрике |
+| **`checkpoints/ibm_gine_fulldata.pt`** | base GINe (без адаптаций) | **0.054** | 0.116 | **дефолт Streamlit** — лучший из двух demo-чекпоинтов |
 | `checkpoints/ibm_multignn_fulldata.pt` | полный Multi-GNN (reverse+port+ego) | 0.041 | 0.113 | для скриншота «иллюстрация метода» (RQ2) |
 
-Метрики близкие (разница в пределах шума прогона). Дефолт продукта — base GINe;
+Метрики двух demo-чекпоинтов близкие (разница в пределах шума прогона). Лучший
+standalone GNN в Kaggle verification — PNA full-data (AUC-PR 0.059); его checkpoint
+лежит в `checkpoints/kaggle/`, но не входит в минимальный demo-набор. Дефолт продукта — base GINe;
 переключение в сайдбаре `app/streamlit_app.py`. Загрузчик чекпоинт-агностичен:
 архитектура восстанавливается из метаданных (`in_node/in_edge/in_edge_label` +
 флаги адаптаций из `config`), ключи: `state_dict / config / in_node / in_edge /

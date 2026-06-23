@@ -112,24 +112,34 @@ python -m src.heuristics
 python -m src.compare --ibm        # → results/ibm_comparison*.md, ablation*.png, per_pattern.*
 #   (--run-ibm дополнительно прогоняет всю сетку перед сборкой)
 
+# 4b. Targeted GPU verification на Kaggle P100:
+# notebooks/kaggle_p100_verification.ipynb
+
 # 5. Продукт (режим антифрод). CPU.
 streamlit run app/streamlit_app.py
 ```
 
 Результаты — в `results/` (`ibm_comparison*.md`/`.png`, `ablation*.png`,
-`per_pattern.*`). Числа и выводы (RQ2/RQ3) и сравнение с литературой —
-`docs/lit_benchmarks.md`, `docs/lit_review.md`. Данные и чекпоинты в `.gitignore`;
+`per_pattern.*`). Единый обзор всех IBM-вариантов — `results/ibm_all_variants.md`,
+`results/ibm_all_variants_ranking.png`, `results/ibm_family_best.png`,
+`results/ibm_ablation_heatmap.png`. Manifest финальных результатов —
+`docs/final_results_manifest.md`; audit гибрида против утечки —
+`docs/hybrid_leakage_audit.md`; выводы по Kaggle GPU verification —
+`docs/kaggle_gpu_results.md`. Числа и выводы (RQ2/RQ3) и сравнение с
+литературой — `docs/lit_benchmarks.md`, `docs/lit_review.md`. Данные и чекпоинты в `.gitignore`;
 исключение — два демо-чекпоинта `checkpoints/ibm_*_fulldata.pt` (force-add, ~150KB)
 для запуска продукта «из коробки» (какой нужен — `docs/checkpoint_transfer_note.md`).
 
-**Главные выводы Этапа 2 (кратко):** XGBoost (test AUC-PR 0.24 без времени)
-доминирует над всеми edge-GNN; мультиграфовые адаптации Egressy в нашем —
-ослабленном — режиме прироста над базовой GINe не дают, и даже edge-updates
-(GIN+EU, главный рычаг литературы) не помогли (см. `docs/lit_review.md`, честное
-очерчивание границ переноса); `norm_time` при temporal split вреден. При этом граф
-**несёт сильный сигнал** (ROC-AUC GINe 0.956): применимость графов проявляется в
-ранжировании, структурной per-pattern детекции и продукте, а проигрыш XGBoost —
-в высокоточном режиме при дисбалансе 0.1%.
+**Главные выводы Этапа 2 (кратко):** лучший общий результат даёт гибрид
+**GNN-эмбеддинг → XGBoost** (test AUC-PR 0.330): граф полезен как learned
+representation, хотя standalone edge-GNN уступают табличному XGBoost. Среди чистых
+GNN лучший подтвержденный Kaggle-вариант — PNA в full-data режиме (AUC-PR 0.059),
+а лучший обычный
+табличный baseline — XGBoost без `norm_time` (AUC-PR 0.240). Мультиграфовые
+адаптации Egressy и edge-updates в текущем протоколе не дают устойчивого
+standalone-прироста; `norm_time` при temporal split вреден. Графовый сигнал
+проявляется в ROC-AUC/ранжировании, per-pattern диагностике и гибридной схеме,
+а не в превосходстве GNN-head при дисбалансе 0.1%.
 
 ## Логирование (Weights & Biases)
 Единая точка — `src.utils.init_wandb`. По умолчанию **выключено**. Включение:
