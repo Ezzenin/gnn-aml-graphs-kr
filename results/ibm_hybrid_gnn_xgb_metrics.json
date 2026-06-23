@@ -1,0 +1,40 @@
+{
+  "_note": "Гибрид GNN->XGBoost: эмбеддинг ребра GNN ([h_u||h_v||e_label], 192d) доп-фичами в XGBoost. Анти-утечка: train-ctx для train/val, train+val-ctx для test. Воспроизведение: python scripts/hybrid_gnn_xgb.py - checkpoints/<ckpt>.pt",
+  "model_type": "hybrid_gnn_xgboost",
+  "headline": "hybrid_multignn_xgb test AUC-PR 0.348 — лучшая модель проекта",
+  "comparison": {
+    "xgboost_raw_edge": {
+      "auc_pr": 0.2884,
+      "f1": 0.3972,
+      "roc_auc": 0.963
+    },
+    "xgboost_full": {
+      "auc_pr": 0.2398,
+      "f1": 0.2976,
+      "roc_auc": 0.971
+    },
+    "best_gnn_standalone_pna": {
+      "auc_pr": 0.0993,
+      "f1": 0.1551,
+      "roc_auc": 0.955
+    },
+    "hybrid_gine_emb_xgb": {
+      "auc_pr": 0.3103,
+      "f1": 0.4032,
+      "roc_auc": 0.986,
+      "delta_vs_raw": 0.0219
+    },
+    "hybrid_multignn_emb_xgb": {
+      "auc_pr": 0.3478,
+      "f1": 0.4022,
+      "roc_auc": 0.97,
+      "delta_vs_raw": 0.0594
+    }
+  },
+  "test_metrics": {
+    "auc_pr": 0.3478,
+    "f1": 0.4022,
+    "roc_auc": 0.97
+  },
+  "finding": "монотонно: чем структурнее GNN (base GINe -> Multi-GNN rev+port+ego), тем больше прирост эмбеддинга в гибриде (+2.2пп -> +5.9пп) => сигнал от графовой структуры, не дубль табличных фич."
+}

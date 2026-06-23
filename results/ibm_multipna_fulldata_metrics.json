@@ -1,0 +1,14 @@
+{
+  "_note": "reconstructed_from_run_log (vast.ai A100); per_pattern f1 не сохранён",
+  "model_type": "pna",
+  "model_params": 236162,
+  "val_metrics": {
+    "auc_pr": 0.0447,
+    "f1": 0.0962
+  },
+  "test_metrics": {
+    "auc_pr": 0.0574,
+    "f1": 0.096,
+    "recall_at_precision_90": 0.0
+  }
+}

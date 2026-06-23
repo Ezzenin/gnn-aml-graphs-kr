@@ -60,6 +60,7 @@ IBM_VARIANTS_NOTIME = [
 IBM_VARIANTS_FULLDATA = [
     ("ibm_xgboost_notime", "XGBoost"),
     ("ibm_xgboost_fan", "XGBoost+fan"),
+    ("ibm_hybrid_gnn_xgb", "Hybrid GNN→XGBoost"),  # лучшая модель: граф-эмбеддинг + дерево
     ("ibm_gine_fulldata", "GINe (base)"),
     ("ibm_gine_rev_fulldata", "+reverse"),
     ("ibm_gine_port_fulldata", "+port"),
