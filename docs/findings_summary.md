@@ -28,9 +28,8 @@ Multi-GNN +5.9 п.п.) — значит вклад идёт именно от г
 Анти-утечка соблюдена: эмбеддинги извлекаются на тех же контекстах, что и обучение GNN
 (train-контекст для train/val-рёбер, train+val для test); XGBoost учится на train,
 меряется на полном test. Воспроизведение: `python scripts/hybrid_gnn_xgb.py - checkpoints/ibm_multignn_fulldata.pt`.
-Артефакт: `results/ibm_hybrid_gnn_xgb_metrics.json`; технический audit —
-`docs/hybrid_leakage_audit.md`. Текущий сохраненный JSON — полный Kaggle-прогон
-с precision/recall/threshold.
+Артефакт: `results/ibm_hybrid_gnn_xgb_metrics.json`. Текущий сохраненный JSON —
+полный Kaggle-прогон с precision/recall/threshold.
 
 **Снятый парадокс:** Multi-GNN как *самостоятельный* классификатор хуже base GINe
 (0.041 < 0.054), но её *эмбеддинг* богаче структурой и в гибриде помогает СИЛЬНЕЕ.

@@ -123,8 +123,7 @@ streamlit run app/streamlit_app.py
 `per_pattern.*`). Единый обзор всех IBM-вариантов — `results/ibm_all_variants.md`,
 `results/ibm_all_variants_ranking.png`, `results/ibm_family_best.png`,
 `results/ibm_ablation_heatmap.png`. Manifest финальных результатов —
-`docs/final_results_manifest.md`; audit гибрида против утечки —
-`docs/hybrid_leakage_audit.md`; выводы по Kaggle GPU verification —
+`docs/final_results_manifest.md`; выводы по Kaggle GPU verification —
 `docs/kaggle_gpu_results.md`. Числа и выводы (RQ2/RQ3) и сравнение с
 литературой — `docs/lit_benchmarks.md`, `docs/lit_review.md`. Данные и чекпоинты в `.gitignore`;
 исключение — два демо-чекпоинта `checkpoints/ibm_*_fulldata.pt` (force-add, ~150KB)

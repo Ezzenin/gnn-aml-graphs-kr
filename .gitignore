@@ -230,6 +230,10 @@ data/
 *.pth
 checkpoints/
 
+# Локальные audit-заметки
+docs/*audit*.md
+docs/*аудит*.md
+
 # Weights & Biases
 wandb/
 

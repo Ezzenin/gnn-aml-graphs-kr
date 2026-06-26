@@ -41,7 +41,6 @@
 | `results/ibm_ablation_heatmap.png` | compact RQ2: reverse/port/ego по трем режимам |
 | `results/ibm_ladder.md`, `results/transition_ladder.png` | лестница weak -> strong GNN |
 | `results/per_pattern.md`, `results/per_pattern.png` | RQ3 по паттернам |
-| `docs/hybrid_leakage_audit.md` | защита гибридного результата от вопросов про утечку |
 | `docs/kaggle_gpu_results.md` | финальная интерпретация Kaggle GPU verification |
 | `notebooks/kaggle_gpu_results_2.ipynb` | выполненный Kaggle notebook с финальным прогоном |
 | `docs/findings_summary.md` | развернутый тезис для текста/защиты |
